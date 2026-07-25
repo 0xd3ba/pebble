@@ -12,7 +12,8 @@ public:
 
 /* Register<T>: a single-slot, validity-tracked storage cell */
 template<typename T>
-struct Register {
+class Register {
+public:
     Register() = default;
     explicit Register(T value): value_{std::move(value)}, valid_{true} {}
 

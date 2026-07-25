@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
 
 namespace pebble::primitives {
 
@@ -17,7 +18,8 @@ public:
 
 /* FifoQueue<T> — fixed-capacity, ring-buffer-backed FIFO */
 template<typename T>
-struct FifoQueue {
+class FifoQueue {
+public:
     FifoQueue() = delete;
     FifoQueue(std::size_t capacity): capacity_{capacity}, storage_(capacity) {
         if(capacity_ == 0)
