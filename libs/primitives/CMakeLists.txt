@@ -12,6 +12,9 @@ add_executable(primitives_tests
     tests/cam_tests.cpp
     tests/bitset_pool_tests.cpp
     tests/latch_tests.cpp
+    tests/clockable_tests.cpp
+    tests/clock_domain_tests.cpp
+    tests/event_queue_tests.cpp
 )
 
 target_link_libraries(primitives_tests PRIVATE primitives GTest::gtest_main)

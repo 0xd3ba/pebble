@@ -16,7 +16,7 @@ public:
     using std::logic_error::logic_error;
 };
 
-/* FifoQueue<T> — fixed-capacity, ring-buffer-backed FIFO */
+/* FifoQueue<T> -- fixed-capacity, ring-buffer-backed FIFO */
 template<typename T>
 class FifoQueue {
 public:
