@@ -11,6 +11,7 @@ add_executable(primitives_tests
     tests/fifo_tests.cpp
     tests/cam_tests.cpp
     tests/bitset_pool_tests.cpp
+    tests/latch_tests.cpp
 )
 
 target_link_libraries(primitives_tests PRIVATE primitives GTest::gtest_main)
