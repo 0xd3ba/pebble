@@ -1,0 +1,10 @@
+{
+  "name": "pebble",
+  "version": "0.0.1",
+  "dependencies": [
+    "gtest",
+    "benchmark",
+    "nlohmann-json",
+    "spdlog"
+  ]
+}
