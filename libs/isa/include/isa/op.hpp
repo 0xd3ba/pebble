@@ -1,0 +1,34 @@
+#pragma once
+
+namespace pebble::isa {
+
+/* Op -- every RV32I + M instruction the decoder will recognize, plus Illegal for anything else
+ * Reference: https://msyksphinz-self.github.io/riscv-isadoc/ */
+enum class Op {
+
+    /* RV32I: register-register ALU */
+    ADD, SUB, XOR, OR, AND, SLL, SRL, SRA, SLT, SLTU,
+
+    /* RV32I: register-immediate ALU */
+    ADDI, XORI, ORI, ANDI, SLLI, SRLI, SRAI, SLTI, SLTIU,
+
+    /* RV32I: loads/stores */
+    LB, LH, LW, LBU, LHU, SB, SH, SW,
+
+    /* RV32I: control transfer */
+    BEQ, BNE, BLT, BGE, BLTU, BGEU, JAL, JALR,
+
+    /* RV32I: upper immediate */
+    LUI, AUIPC,
+
+    /* RV32I: misc-memory / system (modeled as recognized, functionally no-op/trap-triggering) -- can't ignore these */
+    FENCE, ECALL, EBREAK,
+
+    /* M extension */
+    MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU,
+
+    /* Anything that doesn't match a legal RV32I+M encoding */
+    ILLEGAL,
+};
+
+}  // namespace pebble::isa

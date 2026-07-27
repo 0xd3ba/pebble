@@ -1,15 +1,19 @@
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
-add_library(isa INTERFACE)
+add_library(isa STATIC
+    src/decoder.cpp
+)
 
-target_include_directories(isa INTERFACE include)
-target_link_libraries(isa INTERFACE primitives)
+target_include_directories(isa PUBLIC include)
+target_link_libraries(isa PUBLIC primitives utils PRIVATE spdlog::spdlog)
 
 add_executable(isa_tests
     tests/reg_id_tests.cpp
+    tests/decoder_tests.cpp
 )
 
-target_link_libraries(isa_tests PRIVATE primitives isa nlohmann_json::nlohmann_json GTest::gtest_main)
+target_link_libraries(isa_tests PRIVATE primitives isa nlohmann_json::nlohmann_json spdlog::spdlog GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(isa_tests)

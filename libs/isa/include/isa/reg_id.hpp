@@ -29,7 +29,7 @@ public:
     uint8_t index() const noexcept { return index_; }
 
 private:
-    const uint8_t index_;
+    uint8_t index_;
 };
 
 }  // namespace pebble::isa

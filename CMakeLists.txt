@@ -8,6 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 enable_testing()
 add_compile_options(-Wall -Wextra -Wpedantic)
 
+add_subdirectory(libs/utils)
 add_subdirectory(libs/primitives)
 add_subdirectory(libs/stats)
 add_subdirectory(libs/isa)
