@@ -4,6 +4,7 @@ find_package(GTest CONFIG REQUIRED)
 
 add_library(isa STATIC
     src/decoder.cpp
+    src/ops.cpp
 )
 
 target_include_directories(isa PUBLIC include)
@@ -15,6 +16,7 @@ add_executable(isa_tests
     tests/arf_tests.cpp
     tests/flat_memory_tests.cpp
     tests/csrf_tests.cpp
+    tests/ops_tests.cpp
 )
 
 target_link_libraries(isa_tests PRIVATE primitives isa nlohmann_json::nlohmann_json spdlog::spdlog GTest::gtest_main)
