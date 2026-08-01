@@ -12,6 +12,7 @@ target_link_libraries(isa PUBLIC primitives utils PRIVATE spdlog::spdlog)
 add_executable(isa_tests
     tests/reg_id_tests.cpp
     tests/decoder_tests.cpp
+    tests/arf_tests.cpp
 )
 
 target_link_libraries(isa_tests PRIVATE primitives isa nlohmann_json::nlohmann_json spdlog::spdlog GTest::gtest_main)
