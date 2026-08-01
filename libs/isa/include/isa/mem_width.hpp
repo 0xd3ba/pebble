@@ -19,7 +19,7 @@ constexpr std::size_t mem_width_bytes(MemWidth w) {
         case MemWidth::Half: return 2;
         case MemWidth::Word: return 4;
         default:
-            throw std::domain_error{"received unsupported MemWidth" + std::to_string(w)};
+            throw std::domain_error{"received unsupported MemWidth"};
     }
 }
 

@@ -32,8 +32,8 @@ struct Trap {
     std::optional<addr_t> faulting_addr{};
     std::string message{};
 
-    [[nodiscard]] static Trap none() const { return Trap{}; }
-    [[nodiscard]] bool is_trap() { return kind == TrapKind::None; }
+    [[nodiscard]] static Trap none() { return Trap{}; }
+    [[nodiscard]] bool is_trap() { return kind != TrapKind::None; }
 };
 
 }  // namespace pebble::isa
