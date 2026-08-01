@@ -49,7 +49,7 @@ private:
     static Instruction decode_upp_imm(word_t w, Op op) noexcept;
     static Instruction decode_misc(word_t w, Op op) noexcept;
 
-    static constexpr Instruction illegal_instruction(word_t w) { return Instruction{.raw=w, .op=Op::ILLEGAL}; }
+    static constexpr Instruction illegal_instruction(word_t w) { return Instruction{.raw=w, .op=Op::ILLEGAL, .op_fam=OpFamily::Illegal}; }
 
     static RegId reg_id(word_t w, std::size_t lo, std::size_t hi) {
         return RegId{ static_cast<uint8_t>(BitsW::get_bits(w, lo, hi)) };

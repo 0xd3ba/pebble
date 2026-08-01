@@ -8,6 +8,7 @@ namespace pebble::isa {
 Instruction Decoder::decode_reg_reg(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::RegReg;
     i.rd = reg_id(w, 7, 11);
     i.rs1 = reg_id(w, 15, 19);
     i.rs2 = reg_id(w, 20, 24);
@@ -63,6 +64,7 @@ Instruction Decoder::decode_reg_reg(word_t w) noexcept {
 Instruction Decoder::decode_reg_imm(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::RegImm;
     i.rd = reg_id(w, 7, 11);
     i.rs1 = reg_id(w, 15, 19);
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
@@ -100,6 +102,7 @@ Instruction Decoder::decode_reg_imm(word_t w) noexcept {
 Instruction Decoder::decode_load(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::Load;
     i.rd = reg_id(w, 7, 11);
     i.rs1 = reg_id(w, 15, 19);
     i.imm = BitsW::sign_extend(BitsW::get_bits(w, 20, 31), 12);  // 12-bit immediate
@@ -122,6 +125,7 @@ Instruction Decoder::decode_load(word_t w) noexcept {
 Instruction Decoder::decode_store(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::Store;
     i.rs1 = reg_id(w, 15, 19);
     i.rs2 = reg_id(w, 20, 24);
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
@@ -146,6 +150,7 @@ Instruction Decoder::decode_store(word_t w) noexcept {
 Instruction Decoder::decode_branch(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::Branch;
     i.rs1 = reg_id(w, 15, 19);
     i.rs2 = reg_id(w, 20, 24);
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
@@ -184,6 +189,7 @@ Instruction Decoder::decode_branch(word_t w) noexcept {
 Instruction Decoder::decode_jumps(word_t w, Op op) noexcept {
     Instruction i{};
     i.raw = w;
+    i.op_fam = OpFamily::Jump;
     i.rd = reg_id(w, 7, 11);
     i.op = op;
 
@@ -225,6 +231,7 @@ Instruction Decoder::decode_upp_imm(word_t w, Op op) noexcept {
     Instruction i{};
     i.raw = w;
     i.op = op;
+    i.op_fam = OpFamily::UppImm;
 
     switch(op) {
         case Op::LUI:  // fall through
@@ -244,6 +251,7 @@ Instruction Decoder::decode_misc(word_t w, Op op) noexcept {
     Instruction i{};
     i.raw = w;
     i.op = op;
+    i.op_fam = OpFamily::System;
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
 
     word_t imm = BitsW::get_bits(w, 20, 31);

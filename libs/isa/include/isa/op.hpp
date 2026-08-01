@@ -2,6 +2,19 @@
 
 namespace pebble::isa {
 
+/* OpFamily -- Which shape of operation an Op belongs to, independent of its specific semantics.*/
+enum class OpFamily {
+    RegReg,   // Register-register ALU
+    RegImm,   // Register-immediate ALU
+    Load,     // Memory load
+    Store,    // Memory store
+    Branch,   // Control branch
+    Jump,     // Control jump
+    UppImm,   // Upper immediate (LUI/AUIPC)
+    System,   // FENCE/ECALL/EBREAK
+    Illegal,  // Illegal instruction
+};
+
 /* Op -- every RV32I + M instruction the decoder will recognize, plus Illegal for anything else
  * Reference: https://msyksphinz-self.github.io/riscv-isadoc/ */
 enum class Op {
