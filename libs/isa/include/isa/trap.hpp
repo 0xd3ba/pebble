@@ -14,6 +14,7 @@ namespace pebble::isa {
 enum class TrapKind {
     None,                      // no trap/fault occurred
     IllegalInstruction,        // unsupported/invalid instruction
+    PCAddressMisaligned,       // program counter not aligned to word boundary
     LoadAddressMisaligned,     // load address not aligned to word boundary
     StoreAddressMisaligned,    // store address not aligned to word boundary
     LoadAccessFault,           // load address outside FlatMemory's provisioned range
