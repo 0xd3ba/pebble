@@ -5,6 +5,7 @@
     "gtest",
     "benchmark",
     "nlohmann-json",
-    "spdlog"
+    "spdlog",
+    "elfio"
   ]
 }
