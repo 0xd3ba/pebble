@@ -5,6 +5,7 @@
 #include <vector>
 #include "isa/mem_width.hpp"
 #include "isa/trap.hpp"
+#include "utils/cast.hpp"
 
 namespace pebble::isa {
 
@@ -29,7 +30,7 @@ public:
     FlatMemory(const FlatMemory &other) = delete;
     FlatMemory& operator=(const FlatMemory &other) = delete;
 
-    [[nodiscard]] flat_memory::ReadResult read(addr_t addr, MemWidth w) {
+    [[nodiscard]] flat_memory::ReadResult read(addr_t addr, MemWidth w) const {
         Trap t = check_illegal_access(addr, w, /*is_load=*/true);
         if(t.kind != TrapKind::None) return flat_memory::ReadResult{.value=0, .trap=t};
 
@@ -37,7 +38,7 @@ public:
         uint32_t value = 0;
 
         for(std::size_t i=0; i<n; i++)
-            value |= (static_cast<uint32_t>(bytes_[addr + i]) << (8 * i));
+            value |= (utils::Cast::u32(bytes_[addr + i]) << (8 * i));
 
         return flat_memory::ReadResult{.value=value, .trap=Trap::none()};
     }
@@ -60,7 +61,7 @@ private:
     std::vector<uint8_t> bytes_;
 
     /* Checks for illegal access, if the address is misaligned or falls outside the provisioned memory space */
-    [[nodiscard]] Trap check_illegal_access(addr_t addr, MemWidth w, bool is_load = true) {
+    [[nodiscard]] Trap check_illegal_access(addr_t addr, MemWidth w, bool is_load = true) const {
         std::size_t n = mem_width_bytes(w);
         if(n>1 && (addr % n) != 0) {
             return Trap{
