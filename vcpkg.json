@@ -6,6 +6,7 @@
     "benchmark",
     "nlohmann-json",
     "spdlog",
-    "elfio"
+    "elfio",
+    "cli11"
   ]
 }
