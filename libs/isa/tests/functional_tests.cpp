@@ -6,6 +6,7 @@
 #include "isa/flat_memory.hpp"
 #include "isa/functional.hpp"
 #include "isa/instruction.hpp"
+#include "isa/mem_width.hpp"
 #include "isa/op.hpp"
 
 using namespace pebble::isa;

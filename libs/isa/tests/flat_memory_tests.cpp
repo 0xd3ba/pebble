@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "isa/flat_memory.hpp"
+#include "isa/mem_width.hpp"
 #include "isa/trap.hpp"
 
 using namespace pebble::isa;

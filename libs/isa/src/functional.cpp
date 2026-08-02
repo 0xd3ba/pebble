@@ -9,31 +9,6 @@
 #include "utils/cast.hpp"
 
 namespace pebble::isa::functional {
-namespace {
-
-/* Returns the appropriate width of load/store instruction */
-MemWidth width_of(Op op) {
-    switch (op) {
-        case Op::LB:
-        case Op::LBU:
-        case Op::SB:
-            return MemWidth::Byte;
-
-        case Op::LH:
-        case Op::LHU:
-        case Op::SH:
-            return MemWidth::Half;
-
-        case Op::LW:
-        case Op::SW:
-            return MemWidth::Word;
-
-        default:
-            throw std::invalid_argument{"width_of: not a load/store op"};
-    }
-}
-
-}  // namespace
 
 FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const ArchRegisterFile &regs, const FlatMemory &mem, [[maybe_unused]] const CsrFile &csrf) {
     const uint32_t rs1_val = instr.rs1.has_value()? regs.read(*instr.rs1): 0;
@@ -52,7 +27,7 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
 
         case OpFamily::Load: {
             addr_t load_addr = rs1_val + utils::Cast::u32(instr.imm);
-            flat_memory::ReadResult read_res = mem.read(load_addr, width_of(instr.op));
+            flat_memory::ReadResult read_res = mem.read(load_addr, width_of_mem_op(instr.op));
             if(read_res.trap.is_trap()) {
                 r.trap = read_res.trap;
                 r.rd = std::nullopt;
