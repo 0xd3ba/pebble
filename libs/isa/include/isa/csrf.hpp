@@ -27,15 +27,20 @@ public:
     void set_mcause(TrapKind kind) noexcept { mcause_ = kind; }
     [[nodiscard]] TrapKind read_mcause() const noexcept { return mcause_; }
 
+    void set_mepc(addr_t mepc) noexcept { mepc_ = mepc; }
+    [[nodiscard]] addr_t read_mepc() const noexcept { return mepc_; }
+
     void reset() noexcept {
         cycle_ = 0;
         instret_ = 0;
+        mepc_ = 0;
         mcause_ = TrapKind::None;
     }
 
 private:
     uint64_t cycle_{0};    // cycles passed
     uint64_t instret_{0};  // instructions retired
+    addr_t mepc_{0};       // PC of the instruction causing the trap
     TrapKind mcause_{TrapKind::None};
 };
 
