@@ -1,11 +1,15 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include "isa/addr.hpp"
 #include "isa/arf.hpp"
 #include "isa/csrf.hpp"
+#include "isa/decoder.hpp"
 #include "isa/flat_memory.hpp"
 #include "isa/instruction.hpp"
+#include "isa/mem_width.hpp"
+#include "isa/ops.hpp"
 #include "isa/reg_id.hpp"
 #include "isa/trap.hpp"
 
@@ -19,9 +23,9 @@ namespace pebble::isa::functional {
  * branches etc.) -- writeback_value is meaningless in
  * that case and should be ignored by the caller rather than relied on.
  *
- * store_addr/store_value: deferred memory write. store_addr is nullopt
- * for every non-store instruction; when present, FunctionalCpu::step()
- * performs the actual FlatMemory::write() at commit.
+ * mem_addr/store_value: deferred memory read/write. mem_addr is nullopt
+ * for every non-memory instruction; when present, FunctionalCpu::step()
+ * performs the actual FlatMemory::read()/write() at mem-access/writeback (commit).
  *
  * next_pc: set only when control flow diverges from the default
  * PC+4 (taken branches, JAL, JALR). FunctionalCpu falls back to PC+4
@@ -36,7 +40,7 @@ struct FunctionalExecutionResult {
     std::optional<RegId> rd;
     arf_t writeback_value{0};
 
-    std::optional<addr_t> store_addr;
+    std::optional<addr_t> mem_addr;
     word_t store_value{0};
 
     std::optional<addr_t> next_pc;
@@ -49,6 +53,91 @@ struct FunctionalExecutionResult {
 /* execute() -- Pure computation of one decoded instruction without committing the result
  * Note: CsrFile is passed for uniformity across all instruction families for consistency, even though only
  * ecall/ebreak instructions use it */
-[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs, const FlatMemory& mem, const CsrFile& csrf);
+[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs);
+
+/* FunctionalCpu -- single-cycle, non-pipelined RV32I+M interpreter.
+ * Each step() call fully commits exactly one instruction: fetch, decode,
+ * execute, mem-access, writeback, PC update, CSRF bookkeeping.
+ * No timing, no speculation, no overlap between instructions.
+ * Mainly built to be used as comparison for functional correctness against other (real, timing-modeling) CPU implementations
+ *
+ * IMPORTANT: step() returns a Trap rather than throwing or maintaining an internal "halted" flag. On a failed execution,
+ * the caller needs to halt execution; the PC is not updated in FunctionalCpu, not doing so would lead to an infinite loop */
+class FunctionalCpu {
+public:
+    FunctionalCpu() = delete;
+    FunctionalCpu(addr_t pc, ArchRegisterFile &regs, FlatMemory &mem, CsrFile &csrf):
+        pc_{pc}, regs_{regs}, mem_{mem}, csrf_{csrf}
+    {}
+
+    FunctionalCpu(const FunctionalCpu &other) = delete;
+    FunctionalCpu& operator=(const FunctionalCpu &other) = delete;
+
+    [[nodiscard]] Trap step() {
+        // stage-1: instruction fetch
+        flat_memory::ReadResult read_res = mem_.read(pc_, MemWidth::Word);
+        if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap);
+
+        // stage-2: instruction decode
+        word_t word = read_res.value;
+        Instruction instr = Decoder::decode(word);
+        if(instr.is_illegal()) {
+            Trap t{};
+            t.kind = TrapKind::IllegalInstruction;
+            t.message = "illegal instruction encoding: " + std::to_string(instr.raw);
+            return finish_with_trap(t);
+        }
+
+        /* stage-3: (register read +) execute
+         * register read normally happens alongside decode; decode(...) designed specifically to only
+         * decode an instruction (single responsibility). In either case, register read happens before execution */
+        FunctionalExecutionResult result = execute(instr, pc_, regs_);
+        if(result.trap.is_trap()) finish_with_trap(result.trap);
+
+        // stage-4: memory-access
+        if(instr.op_fam == OpFamily::Load || instr.op_fam == OpFamily::Store) {
+            addr_t mem_addr = *result.mem_addr;
+
+            // case: load
+            if(instr.op_fam == OpFamily::Load) {
+                flat_memory::ReadResult read_res = mem_.read(mem_addr, width_of_mem_op(instr.op));
+                if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap);
+                // store the value in the result's writeback field
+                result.writeback_value = format_load_value(instr.op, read_res.value);
+            }
+
+            // case: store
+            else {
+                Trap t = mem_.write(mem_addr, width_of_mem_op(instr.op), result.store_value);
+                if(t.is_trap()) return finish_with_trap(t);
+            }
+        }
+
+        // stage-5: writeback (commit)
+        if(result.rd.has_value()) regs_.write(*result.rd, result.writeback_value);
+
+        // update PC and other bookkeeping information
+        pc_ = result.next_pc.value_or(pc_ + 4);
+        csrf_.increment_cycle();
+        csrf_.increment_instret();
+        return Trap::none();
+    }
+
+private:
+    addr_t pc_;
+    ArchRegisterFile &regs_;
+    FlatMemory &mem_;
+    CsrFile &csrf_;
+
+    Trap finish_with_trap(Trap &t) {
+        if(!t.faulting_addr.has_value()) t.faulting_addr = pc_;
+        csrf_.increment_cycle();
+        csrf_.set_mepc(pc_);
+        csrf_.set_mcause(t.kind);
+        // instret is deliberately NOT incremented: the trapping instruction did not retire/commit to architectural state
+        return t;
+    }
+
+};
 
 }  // namespace pebble::isa

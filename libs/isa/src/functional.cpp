@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <stdexcept>
+#include <utility>
 #include "isa/addr.hpp"
-#include "isa/flat_memory.hpp"
 #include "isa/functional.hpp"
 #include "isa/mem_width.hpp"
 #include "isa/op.hpp"
@@ -10,7 +10,7 @@
 
 namespace pebble::isa::functional {
 
-FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const ArchRegisterFile &regs, const FlatMemory &mem, [[maybe_unused]] const CsrFile &csrf) {
+FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const ArchRegisterFile &regs) {
     const uint32_t rs1_val = instr.rs1.has_value()? regs.read(*instr.rs1): 0;
     const uint32_t rs2_val = instr.rs2.has_value()? regs.read(*instr.rs2): 0;
     FunctionalExecutionResult r{};
@@ -25,21 +25,15 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
             r.writeback_value = compute_reg_imm(instr.op, rs1_val, instr.imm);
             break;
 
-        case OpFamily::Load: {
-            addr_t load_addr = rs1_val + utils::Cast::u32(instr.imm);
-            flat_memory::ReadResult read_res = mem.read(load_addr, width_of_mem_op(instr.op));
-            if(read_res.trap.is_trap()) {
-                r.trap = read_res.trap;
-                r.rd = std::nullopt;
-            }
-            else r.writeback_value = format_load_value(instr.op, read_res.value);
+        case OpFamily::Load:
+            r.mem_addr = rs1_val + utils::Cast::u32(instr.imm);
+            // read deferred until next stage (mem-access) by the functional cpu -- misaligned/out-of-range read only detected later
             break;
-        }
 
         case OpFamily::Store:
-            r.store_addr = rs1_val + utils::Cast::u32(instr.imm);
+            r.mem_addr = rs1_val + utils::Cast::u32(instr.imm);
             r.store_value = rs2_val;
-            // write deferred until commit by the functional cpu -- misaligned/out-of-range write only detected later
+            // write deferred until commit/writeback by the functional cpu -- misaligned/out-of-range write only detected later
             break;
 
         case OpFamily::Branch:
@@ -90,6 +84,17 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
             throw std::invalid_argument{"execute() called with illegal instruction; functional cpu must not route them here"};
 
         default: throw std::invalid_argument{"execute(): unhandled op family received"};
+    }
+
+    // for branch/jump instructions, need to ensure that the next PC is aligned to word boundary (4 byte alignment)
+    if(r.next_pc.has_value()) {
+        if(*r.next_pc & 0x3) {
+            Trap t{};
+            t.kind = TrapKind::PCAddressMisaligned;
+            t.faulting_addr = *r.next_pc;
+            t.message = "PC address misaligned";
+            r.trap = std::move(t);
+        }
     }
 
     return r;
