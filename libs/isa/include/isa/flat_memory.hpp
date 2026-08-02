@@ -27,9 +27,6 @@ public:
     FlatMemory() = delete;
     explicit FlatMemory(std::size_t size_bytes): bytes_(size_bytes, 0) {}
 
-    FlatMemory(const FlatMemory &other) = delete;
-    FlatMemory& operator=(const FlatMemory &other) = delete;
-
     [[nodiscard]] flat_memory::ReadResult read(addr_t addr, MemWidth w) const {
         Trap t = check_illegal_access(addr, w, /*is_load=*/true);
         if(t.kind != TrapKind::None) return flat_memory::ReadResult{.value=0, .trap=t};

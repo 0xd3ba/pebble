@@ -37,7 +37,7 @@ struct ElfImage {
     }
 
     /* Returns the virtual address of the symbol, if it exists; std:nullopt otherwise */
-    [[nodiscard]] std::optional<vaddr_t> find_symbol(const std::string &symbol) {
+    [[nodiscard]] std::optional<vaddr_t> find_symbol(const std::string &symbol) const noexcept {
         auto it = symbols_map.find(symbol);
         if(it == symbols_map.end()) return std::nullopt;
         return it->second;
