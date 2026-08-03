@@ -115,6 +115,27 @@ uint32_t compute_upp_imm(Op op, uint32_t pc, int32_t imm) {
     }
 }
 
+uint32_t compute_csr_write(Op op, uint32_t old_csr_val, uint32_t value) {
+    switch(op) {
+        // csr write: overwrite csr with new value; nothing to compute
+        case Op::CSRRW:
+        case Op::CSRRWI:
+            return value;
+
+        // csr set bits: set the bits in csr (value treated as bitmask)
+        case Op::CSRRS:
+        case Op::CSRRSI:
+            return old_csr_val | value;
+
+        // csr clear bits: unset the bits in csr (value treated as bitmask)
+        case Op::CSRRC:
+        case Op::CSRRCI:
+            return old_csr_val & ~value;
+
+        default: throw std::invalid_argument{"invalid op provided for csr computation"};
+    }
+}
+
 std::uint32_t format_load_value(Op op, uint32_t raw_val) {
     switch(op) {
         case Op::LB:  return Cast::u32(Cast::i32(Cast::i8(raw_val & 0xff)));

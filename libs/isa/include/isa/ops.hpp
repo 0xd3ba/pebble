@@ -11,6 +11,7 @@ namespace pebble::isa {
 [[nodiscard]] uint32_t compute_reg_imm(Op op, uint32_t rs1_val, int32_t imm);
 [[nodiscard]] bool compute_branch_taken(Op op, uint32_t rs1_val, uint32_t rs2_val);
 [[nodiscard]] uint32_t compute_upp_imm(Op op, uint32_t pc, int32_t imm);
+[[nodiscard]] uint32_t compute_csr_write(Op op, uint32_t old_csr_val, uint32_t value);
 
 /* Load-result formatting (sign/zero-extension based on width and signedness) -- applied to raw bytes already
  * read from memory by whatever model-specific mechanism did the actual access */
