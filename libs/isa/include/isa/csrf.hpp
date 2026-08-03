@@ -58,6 +58,8 @@ public:
     [[nodiscard]] uint32_t read_cycle_low() const noexcept { return utils::Cast::u32(cycle_ & 0xffffffffu); }
     [[nodiscard]] uint32_t read_instret_high() const noexcept { return utils::Cast::u32(instret_ >> 32); }
     [[nodiscard]] uint32_t read_instret_low() const noexcept { return utils::Cast::u32(instret_ & 0xffffffffu); }
+    [[nodiscard]] uint64_t read_cycle() const noexcept { return cycle_; }
+    [[nodiscard]] uint64_t read_instret() const noexcept { return instret_; }
 
     /* Records the cause of the most recently observed trap. Takes a TrapKind directly (not a raw mcause encoding)
      * as we're not reproducing the real mcause bit-layout since nothing will decode it back out.
