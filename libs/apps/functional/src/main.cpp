@@ -96,6 +96,7 @@ int run(Program &prgm, uint64_t max_cycles) {
         // unhandled exception -- halt immediately
         if(trap.is_trap()) {
             spdlog::critical("[CRASH] cycles={} at={} reason={}", cycle, *trap.faulting_addr, trap.message);
+            cpu.dump_trace();
             return -1;
         }
     }
