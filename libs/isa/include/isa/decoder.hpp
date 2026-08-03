@@ -29,8 +29,8 @@ public:
             case 0b1100111: return decode_jumps(w, Op::JALR);       // RV32I: control transfer (jumps -- jalr)
             case 0b0110111: return decode_upp_imm(w, Op::LUI);      // RV32I: upper immediate (lui)
             case 0b0010111: return decode_upp_imm(w, Op::AUIPC);    // RV32I: upper immediate (auipc)
-            case 0b0001111: return decode_misc(w, Op::FENCE);       // RV32I: misc-memory (fence)
-            case 0b1110011: return decode_misc(w, Op::ECALL);       // RV32I: misc-system (ecall/ebreak)
+            case 0b0001111: return decode_fence(w);                 // RV32I: fence (fence)
+            case 0b1110011: return decode_system(w);                // RV32I: system (ecall/ebreak/csr*)
         }
         spdlog::critical("Decoder: illegal/unrecognized instruction encoding 0x{:08x}", w);
         return illegal_instruction(w);
@@ -47,7 +47,8 @@ private:
     static Instruction decode_branch(word_t w) noexcept;
     static Instruction decode_jumps(word_t w, Op op) noexcept;
     static Instruction decode_upp_imm(word_t w, Op op) noexcept;
-    static Instruction decode_misc(word_t w, Op op) noexcept;
+    static Instruction decode_fence(word_t w) noexcept;
+    static Instruction decode_system(word_t w) noexcept;
 
     static constexpr Instruction illegal_instruction(word_t w) { return Instruction{.raw=w, .op=Op::ILLEGAL, .op_fam=OpFamily::Illegal}; }
 

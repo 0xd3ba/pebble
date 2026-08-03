@@ -20,6 +20,7 @@ struct Instruction {
     std::optional<RegId> rs1{};  // Source register #1 ID
     std::optional<RegId> rs2{};  // Source register #2 ID
     word_t imm{0};               // Immediate field (will be sign-extended by the decoder)
+    uint16_t csr_addr{0};        // Csr field (only used by Csr family of ops)
     uint8_t funct3{0};           // ID mapping a family of instructions (for e.g. register-register)
     uint8_t funct7{0};           // ID to disambiguate between each instruction within a given family (for e.g. add vs. sub)
 
