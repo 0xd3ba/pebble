@@ -10,7 +10,7 @@
 
 namespace pebble::isa::functional {
 
-FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const ArchRegisterFile &regs) {
+FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const ArchRegisterFile &regs, CsrFile &csrf) {
     const uint32_t rs1_val = instr.rs1.has_value()? regs.read(*instr.rs1): 0;
     const uint32_t rs2_val = instr.rs2.has_value()? regs.read(*instr.rs2): 0;
     FunctionalExecutionResult r{};
@@ -77,6 +77,17 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
 
                 default: throw std::invalid_argument{"execute() on system family but op unsupported"};
             }
+            break;
+        }
+
+        case OpFamily::Csr: {
+            uint32_t old_csr_val = csrf.read(instr.csr_addr);
+            uint32_t operand = instr.rs1.has_value()? regs.read(*instr.rs1): utils::Cast::u32(instr.imm);  // *i variants use imm (rs1 unset)
+            uint32_t new_csr_val = compute_csr_write(instr.op, old_csr_val, operand);
+
+            r.writeback_value = old_csr_val;  // old value is stored in rd
+            r.csr_addr = instr.csr_addr;
+            r.csr_value = new_csr_val;
             break;
         }
 

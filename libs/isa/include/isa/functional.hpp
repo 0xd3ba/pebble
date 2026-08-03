@@ -43,6 +43,9 @@ struct FunctionalExecutionResult {
     std::optional<addr_t> mem_addr;
     word_t store_value{0};
 
+    std::optional<uint16_t> csr_addr;
+    uint32_t csr_value{0};
+
     std::optional<addr_t> next_pc;
 
     Trap trap{};
@@ -53,7 +56,7 @@ struct FunctionalExecutionResult {
 /* execute() -- Pure computation of one decoded instruction without committing the result
  * Note: CsrFile is passed for uniformity across all instruction families for consistency, even though only
  * ecall/ebreak instructions use it */
-[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs);
+[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs, CsrFile &csrf);
 
 /* FunctionalCpu -- single-cycle, non-pipelined RV32I+M interpreter.
  * Each step() call fully commits exactly one instruction: fetch, decode,
@@ -91,7 +94,7 @@ public:
         /* stage-3: (register read +) execute
          * register read normally happens alongside decode; decode(...) designed specifically to only
          * decode an instruction (single responsibility). In either case, register read happens before execution */
-        FunctionalExecutionResult result = execute(instr, pc_, regs_);
+        FunctionalExecutionResult result = execute(instr, pc_, regs_, csrf_);
         if(result.trap.is_trap()) finish_with_trap(result.trap);
 
         // stage-4: memory-access
@@ -120,6 +123,9 @@ public:
         pc_ = result.next_pc.value_or(pc_ + 4);
         csrf_.increment_cycle();
         csrf_.increment_instret();
+        if(result.csr_addr.has_value())
+            csrf_.write(*result.csr_addr, result.csr_value);
+
         return Trap::none();
     }
 
