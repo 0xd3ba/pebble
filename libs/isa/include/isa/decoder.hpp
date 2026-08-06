@@ -29,7 +29,7 @@ public:
             case 0b1100111: return decode_jumps(w, Op::JALR);       // RV32I: control transfer (jumps -- jalr)
             case 0b0110111: return decode_upp_imm(w, Op::LUI);      // RV32I: upper immediate (lui)
             case 0b0010111: return decode_upp_imm(w, Op::AUIPC);    // RV32I: upper immediate (auipc)
-            case 0b0001111: return decode_fence(w);                 // RV32I: fence (fence)
+            case 0b0001111: return decode_fence(w);                 // RV32I: fence (fence/fence.i)
             case 0b1110011: return decode_system(w);                // RV32I: system (ecall/ebreak/mret/csr*)
         }
         spdlog::critical("Decoder: illegal/unrecognized instruction encoding 0x{:08x}", w);

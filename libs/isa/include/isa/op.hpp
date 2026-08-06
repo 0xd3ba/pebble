@@ -36,7 +36,7 @@ enum class Op {
     LUI, AUIPC,
 
     /* RV32I: misc-memory / system / csr -- can't ignore these */
-    FENCE, ECALL, EBREAK, MRET,
+    FENCE, FENCEI, ECALL, EBREAK, MRET,
     CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
 
     /* M extension */

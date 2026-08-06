@@ -65,6 +65,7 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
         case OpFamily::System: {
             switch(instr.op) {
                 case Op::FENCE:
+                case Op::FENCEI:
                     break;  // no-op; single-hart, no mem-ordering hazard to enforce
 
                 case Op::ECALL:

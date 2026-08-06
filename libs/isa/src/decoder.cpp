@@ -258,6 +258,7 @@ Instruction Decoder::decode_fence(word_t w) noexcept {
     // note: FENCE instruction is recognized, but treated as no-op for simplicity (for now)
     switch(i.funct3) {
         case 0x0: i.op = Op::FENCE; break;
+        case 0x1: i.op = Op::FENCEI; break;
         default: return illegal_instruction(w);
     }
 

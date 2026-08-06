@@ -66,6 +66,7 @@ private:
             case Op::AUIPC:  return "auipc";
 
             case Op::FENCE:  return "fence";
+            case Op::FENCEI: return "fence.i";
             case Op::ECALL:  return "ecall";
             case Op::EBREAK: return "ebreak";
             case Op::MRET:   return "mret";
