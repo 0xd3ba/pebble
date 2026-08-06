@@ -4,6 +4,7 @@ find_package(GTest CONFIG REQUIRED)
 
 add_library(isa STATIC
     src/decoder.cpp
+    src/disassembler.cpp
     src/ops.cpp
     src/functional.cpp
 )

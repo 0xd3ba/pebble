@@ -7,6 +7,7 @@
 #include "isa/arf.hpp"
 #include "isa/csrf.hpp"
 #include "isa/decoder.hpp"
+#include "isa/disassembler.hpp"
 #include "isa/flat_memory.hpp"
 #include "isa/instruction.hpp"
 #include "isa/mem_width.hpp"
@@ -146,10 +147,12 @@ public:
 
     /* Dump the execution trace */
     void dump_trace() {
-        spdlog::info("dumping execution trace (oldest -> newest): [cycle] [pc] [raw_instruction]");
+        spdlog::info("dumping execution trace (oldest -> newest): [cycle] [pc] [raw_instruction] [decoded instruction]");
         tracer_.for_each([](const FunctionalExecutionTrace &trace) {
-            word_t raw_instr = trace.instr.has_value()? trace.instr->raw: 0;
-            spdlog::info("{} {} {}", trace.cycle, trace.pc, raw_instr);
+            bool instr_valid = trace.instr.has_value();
+            std::string fmt_instr = instr_valid? debug::Disassembler::disassemble(*trace.instr): "";
+            word_t raw_instr = instr_valid? trace.instr->raw: 0;
+            spdlog::info("0x{:016x} 0x{:08x} 0x{:08x} {}", trace.cycle, trace.pc, raw_instr, fmt_instr);
         });
     }
 
