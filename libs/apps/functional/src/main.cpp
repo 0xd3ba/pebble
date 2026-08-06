@@ -22,8 +22,8 @@ namespace putils = pebble::utils;
 
 namespace {
 
-constexpr uint64_t kMaxInstructions = 100'000'000;  // hard upper-bound on instruction executions (unless overridden via CLI)
-constexpr uint64_t kMaxStackBytes = (1u << 22);     // hard upper-bound on call stack size (unless overridden via cli)
+constexpr uint64_t kMaxInstructions = 1'000'000;    // hard upper-bound on instruction executions (unless overridden via CLI)
+constexpr uint64_t kMaxStackBytes = (1u << 12);     // hard upper-bound on call stack size (unless overridden via cli)
 constexpr uint8_t rv_stk_reg_id = 2;                // x2 register holds the stack pointer according to risc-v abi
 constexpr std::string_view rv_tohost = "tohost";    // special symbol used by risc-v tests to communicate the execution status
 
@@ -58,6 +58,7 @@ Program load(const pldr::ElfImage image, uint64_t stk_bytes) {
             if(t.is_trap())
                 throw std::runtime_error{"error during flatmemory write: " + t.message};
         }
+        spdlog::info("load: {} bytes from segment written to flat-memory", s.file_bytes.size());
     }
 
     // stack grows downwards and initial pointer must be 16-byte aligned according to risc-v abi
@@ -77,6 +78,7 @@ int run(Program &prgm, uint64_t max_cycles) {
     pisa::addr_t entry_pc = static_cast<pisa::addr_t>(prgm.entry_pc);
     pisa::functional::FunctionalCpu cpu{entry_pc, prgm.regs, prgm.mem, prgm.csrf};
 
+    spdlog::info("starting simulation");
     for(uint64_t cycle=0; cycle<max_cycles; cycle++) {
         auto trap = cpu.step();  // execute one step
 
@@ -93,9 +95,21 @@ int run(Program &prgm, uint64_t max_cycles) {
             }
         }
 
-        // unhandled exception -- halt immediately
         if(trap.is_trap()) {
+            // specific to Linux ABI (risc-v tests also seem to signal exit via writing value of 93/94 to x17 register)
+            if(trap.kind == pisa::TrapKind::EnvironmentCallFromMMode) {
+                pisa::arf_t a17 = prgm.regs.read(pisa::RegId{17});  // value of 93/94 signals exit
+                pisa::arf_t a10 = prgm.regs.read(pisa::RegId{10});  // stores the exit code
+
+                if(a17 != 93 && a17 != 94) continue;
+                std::string_view status = (a10 != 0)? "FAIL": "PASS";
+                spdlog::info("[{}] cycles={} exit_code={}", std::string{status}, cycle, a10);
+                return a10? -1: 0;
+            }
+
+            // unhandled exception -- halt immediately
             spdlog::critical("[CRASH] cycles={} at={} reason={}", cycle, *trap.faulting_addr, trap.message);
+            cpu.dump_trace();
             return -1;
         }
     }

@@ -12,6 +12,7 @@ enum class OpFamily {
     Jump,     // Control jump
     UppImm,   // Upper immediate (LUI/AUIPC)
     System,   // FENCE/ECALL/EBREAK
+    Csr,      // CSR read-modify-write
     Illegal,  // Illegal instruction
 };
 
@@ -34,8 +35,9 @@ enum class Op {
     /* RV32I: upper immediate */
     LUI, AUIPC,
 
-    /* RV32I: misc-memory / system (modeled as recognized, functionally no-op/trap-triggering) -- can't ignore these */
-    FENCE, ECALL, EBREAK,
+    /* RV32I: misc-memory / system / csr -- can't ignore these */
+    FENCE, FENCEI, ECALL, EBREAK, MRET,
+    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
 
     /* M extension */
     MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU,

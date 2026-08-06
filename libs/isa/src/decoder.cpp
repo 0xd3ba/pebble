@@ -247,33 +247,65 @@ Instruction Decoder::decode_upp_imm(word_t w, Op op) noexcept {
     return i;
 }
 
-Instruction Decoder::decode_misc(word_t w, Op op) noexcept {
+Instruction Decoder::decode_fence(word_t w) noexcept {
     Instruction i{};
     i.raw = w;
-    i.op = op;
     i.op_fam = OpFamily::System;
+    i.rd = reg_id(w, 7, 11);
+    i.rs1 = reg_id(w, 15, 19);
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
 
+    // note: FENCE instruction is recognized, but treated as no-op for simplicity (for now)
+    switch(i.funct3) {
+        case 0x0: i.op = Op::FENCE; break;
+        case 0x1: i.op = Op::FENCEI; break;
+        default: return illegal_instruction(w);
+    }
+
+    return i;
+}
+
+Instruction Decoder::decode_system(word_t w) noexcept {
+    Instruction i{};
     word_t imm = BitsW::get_bits(w, 20, 31);
+    i.raw = w;
+    i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
 
-    switch(op) {
-        case Op::FENCE:  // note: FENCE instruction is recognized, but treated as no-op for simplicity (for now)
-            i.rd = reg_id(w, 7, 11);
-            i.rs1 = reg_id(w, 15, 19);
-            if(i.funct3 != 0x0) return illegal_instruction(w);
-            break;
+    // ecall, ebreak and mret
+    if(i.funct3 == 0x0) {
+        i.op_fam = OpFamily::System;
+        i.imm = imm;
 
-        case Op::ECALL:  // note: ECALL and EBREAK share the same opcode, but differs by immediate value
-            if(i.funct3 != 0x0) return illegal_instruction(w);
-            i.imm = imm;
+        if(i.imm == 0x0) i.op = Op::ECALL;
+        else if(i.imm == 0x1) i.op = Op::EBREAK;
+        else if(i.imm == 0x302) i.op = Op::MRET;
+        else return illegal_instruction(w);
 
-            if(imm == 0x0) {}
-            else if(imm == 0x1) i.op = Op::EBREAK;
-            else return illegal_instruction(w);
-            break;
-
-        default:
+        // ensure rs1 and rd are zeros
+        if(BitsW::get_bits(w, 7, 11) || BitsW::get_bits(w, 15, 19))
             return illegal_instruction(w);
+
+        return i;
+    }
+
+    // funct3 != 0 -> csrr* ops
+    i.op_fam = OpFamily::Csr;
+    i.rd = reg_id(w, 7, 11);
+    i.csr_addr = static_cast<uint16_t>(imm);
+
+    RegId rs1_id = reg_id(w, 15, 19);
+    uint8_t rs1_imm = BitsW::get_bits(w, 15, 19); // *i variants: bits 15:19 hold a 5-bit zero-extended immediate (unsigned imm)
+
+    switch(i.funct3) {
+        // case 0x0 already covered above
+        case 0x1: i.op = Op::CSRRW; i.rs1 = rs1_id; break;
+        case 0x2: i.op = Op::CSRRS; i.rs1 = rs1_id; break;
+        case 0x3: i.op = Op::CSRRC; i.rs1 = rs1_id; break;
+        // no case 0x4
+        case 0x5: i.op = Op::CSRRWI; i.imm = static_cast<int32_t>(rs1_imm); break;
+        case 0x6: i.op = Op::CSRRSI; i.imm = static_cast<int32_t>(rs1_imm); break;
+        case 0x7: i.op = Op::CSRRCI; i.imm = static_cast<int32_t>(rs1_imm); break;
+        default: return illegal_instruction(w);
     }
 
     return i;

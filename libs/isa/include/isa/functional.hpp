@@ -2,16 +2,19 @@
 
 #include <optional>
 #include <string>
+#include <spdlog/spdlog.h>
 #include "isa/addr.hpp"
 #include "isa/arf.hpp"
 #include "isa/csrf.hpp"
 #include "isa/decoder.hpp"
+#include "isa/disassembler.hpp"
 #include "isa/flat_memory.hpp"
 #include "isa/instruction.hpp"
 #include "isa/mem_width.hpp"
 #include "isa/ops.hpp"
 #include "isa/reg_id.hpp"
 #include "isa/trap.hpp"
+#include "utils/tracer.hpp"
 
 namespace pebble::isa::functional {
 
@@ -43,6 +46,9 @@ struct FunctionalExecutionResult {
     std::optional<addr_t> mem_addr;
     word_t store_value{0};
 
+    std::optional<uint16_t> csr_addr;
+    uint32_t csr_value{0};
+
     std::optional<addr_t> next_pc;
 
     Trap trap{};
@@ -50,10 +56,17 @@ struct FunctionalExecutionResult {
     [[nodiscard]] static FunctionalExecutionResult none() { return FunctionalExecutionResult{}; }
 };
 
+/* FunctionalExecutionTrace -- anything that will be needed for debugging when something goes wrong */
+struct FunctionalExecutionTrace {
+    uint64_t cycle;
+    addr_t pc;
+    std::optional<Instruction> instr;
+};
+
 /* execute() -- Pure computation of one decoded instruction without committing the result
  * Note: CsrFile is passed for uniformity across all instruction families for consistency, even though only
  * ecall/ebreak instructions use it */
-[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs);
+[[nodiscard]] FunctionalExecutionResult execute(const Instruction& instr, addr_t pc, const ArchRegisterFile& regs, CsrFile &csrf);
 
 /* FunctionalCpu -- single-cycle, non-pipelined RV32I+M interpreter.
  * Each step() call fully commits exactly one instruction: fetch, decode,
@@ -74,25 +87,30 @@ public:
     FunctionalCpu& operator=(const FunctionalCpu &other) = delete;
 
     [[nodiscard]] Trap step() {
+        FunctionalExecutionTrace trace{};
+        trace.cycle = csrf_.read_cycle();
+        trace.pc = pc_;
+
         // stage-1: instruction fetch
         flat_memory::ReadResult read_res = mem_.read(pc_, MemWidth::Word);
-        if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap);
+        if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap, trace);
 
         // stage-2: instruction decode
         word_t word = read_res.value;
         Instruction instr = Decoder::decode(word);
+        trace.instr = instr;
         if(instr.is_illegal()) {
             Trap t{};
             t.kind = TrapKind::IllegalInstruction;
             t.message = "illegal instruction encoding: " + std::to_string(instr.raw);
-            return finish_with_trap(t);
+            return finish_with_trap(t, trace);
         }
 
         /* stage-3: (register read +) execute
          * register read normally happens alongside decode; decode(...) designed specifically to only
          * decode an instruction (single responsibility). In either case, register read happens before execution */
-        FunctionalExecutionResult result = execute(instr, pc_, regs_);
-        if(result.trap.is_trap()) finish_with_trap(result.trap);
+        FunctionalExecutionResult result = execute(instr, pc_, regs_, csrf_);
+        if(result.trap.is_trap()) return finish_with_trap(result.trap, trace);
 
         // stage-4: memory-access
         if(instr.op_fam == OpFamily::Load || instr.op_fam == OpFamily::Store) {
@@ -101,7 +119,7 @@ public:
             // case: load
             if(instr.op_fam == OpFamily::Load) {
                 flat_memory::ReadResult read_res = mem_.read(mem_addr, width_of_mem_op(instr.op));
-                if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap);
+                if(read_res.trap.is_trap()) return finish_with_trap(read_res.trap, trace);
                 // store the value in the result's writeback field
                 result.writeback_value = format_load_value(instr.op, read_res.value);
             }
@@ -109,7 +127,7 @@ public:
             // case: store
             else {
                 Trap t = mem_.write(mem_addr, width_of_mem_op(instr.op), result.store_value);
-                if(t.is_trap()) return finish_with_trap(t);
+                if(t.is_trap()) return finish_with_trap(t, trace);
             }
         }
 
@@ -120,7 +138,22 @@ public:
         pc_ = result.next_pc.value_or(pc_ + 4);
         csrf_.increment_cycle();
         csrf_.increment_instret();
+        if(result.csr_addr.has_value())
+            csrf_.write(*result.csr_addr, result.csr_value);
+
+        tracer_.push_back(trace);
         return Trap::none();
+    }
+
+    /* Dump the execution trace */
+    void dump_trace() {
+        spdlog::info("dumping execution trace (oldest -> newest): [cycle] [pc] [raw_instruction] [decoded instruction]");
+        tracer_.for_each([](const FunctionalExecutionTrace &trace) {
+            bool instr_valid = trace.instr.has_value();
+            std::string fmt_instr = instr_valid? debug::Disassembler::disassemble(*trace.instr): "";
+            word_t raw_instr = instr_valid? trace.instr->raw: 0;
+            spdlog::info("0x{:016x} 0x{:08x} 0x{:08x} {}", trace.cycle, trace.pc, raw_instr, fmt_instr);
+        });
     }
 
 private:
@@ -128,13 +161,15 @@ private:
     ArchRegisterFile &regs_;
     FlatMemory &mem_;
     CsrFile &csrf_;
+    utils::Tracer<FunctionalExecutionTrace, 64> tracer_{};
 
-    Trap finish_with_trap(Trap &t) {
+    Trap finish_with_trap(Trap &t, FunctionalExecutionTrace trace) {
         if(!t.faulting_addr.has_value()) t.faulting_addr = pc_;
         csrf_.increment_cycle();
         csrf_.set_mepc(pc_);
         csrf_.set_mcause(t.kind);
         // instret is deliberately NOT incremented: the trapping instruction did not retire/commit to architectural state
+        tracer_.push_back(std::move(trace));
         return t;
     }
 

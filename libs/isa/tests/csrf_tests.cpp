@@ -11,6 +11,52 @@ TEST(CsrFileTest, NewCsrFileStartsAtZero) {
     EXPECT_EQ(csr.read_instret_low(), 0);
     EXPECT_EQ(csr.read_instret_high(), 0);
     EXPECT_EQ(csr.read_mcause(), TrapKind::None);
+
+    for(size_t i=0; i<csr.size(); i++)
+        EXPECT_EQ(csr.read(i), 0);
+}
+
+TEST(CsrFileTest, WriteThenReadGivesTheCorrectValue) {
+    CsrFile csr{};
+    uint16_t id = 100;
+    csr.write(id, 0xd3ba);
+    EXPECT_EQ(csr.read(id), 0xd3ba);
+
+    // all other registers must be unaffected
+    for(size_t i=0; i<csr.size(); i++) {
+        if(i != id) EXPECT_EQ(csr.read(i), 0);
+    }
+}
+
+TEST(CsrFileTest, ReadingOrWritingOutOfBoundsThrows) {
+    CsrFile csr{};
+    uint16_t id = csr.size();
+    EXPECT_THROW(csr.read(id), std::out_of_range);
+    EXPECT_THROW(csr.write(id, 100), std::out_of_range);
+}
+
+TEST(CsrFileTest, WriteToCycleCounterIsUnaffected) {
+    CsrFile csr{};
+    auto lo = CsrIndex::kCycleLo;
+    auto hi = CsrIndex::kCycleHi;
+
+    csr.write(lo, 100);
+    csr.write(hi, 200);
+
+    EXPECT_EQ(csr.read(lo), 0);
+    EXPECT_EQ(csr.read(hi), 0);
+}
+
+TEST(CsrFileTest, WriteToInsretCounterIsUnaffected) {
+    CsrFile csr{};
+    auto lo = CsrIndex::kInsRetLo;
+    auto hi = CsrIndex::kInsRetHi;
+
+    csr.write(lo, 100);
+    csr.write(hi, 200);
+
+    EXPECT_EQ(csr.read(lo), 0);
+    EXPECT_EQ(csr.read(hi), 0);
 }
 
 TEST(CsrFileTest, IncrementCycleDefaultsToOne) {
@@ -77,4 +123,7 @@ TEST(CsrFileTest, ResetClearsAllState) {
     EXPECT_EQ(csr.read_instret_low(), 0);
     EXPECT_EQ(csr.read_instret_high(), 0);
     EXPECT_EQ(csr.read_mcause(), TrapKind::None);
+
+    for(std::size_t i=0; i<csr.size(); i++)
+        EXPECT_EQ(csr.read(i), 0);
 }
