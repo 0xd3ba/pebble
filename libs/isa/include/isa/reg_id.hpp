@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <ostream>
-#include <stdexcept>
+#include "primitives/index.hpp"
 
 namespace pebble::isa {
 
@@ -12,34 +10,6 @@ namespace pebble::isa {
  *
  * Note: x0 is not special-cased here, RegId(0) is a perfectly valid RegId.
  * The "x0 always reads as zero, writes are discarded" rule is not enforced by the RegID */
-class RegId {
-public:
-    static constexpr uint8_t kMaxIndex = 31;
-
-    RegId() = delete;
-    explicit RegId(uint8_t index): index_{index} {
-        if(index > kMaxIndex)
-            throw std::out_of_range{"RegId index out of range (must be between [0, 31]): " + std::to_string(index)};
-    }
-
-    bool operator==(const RegId &other) const noexcept = default;
-    bool operator!=(const RegId &other) const noexcept = default;
-    friend std::ostream& operator<<(std::ostream &os, const RegId &r) { return os << "x" << static_cast<int>(r.index_); }
-
-    uint8_t index() const noexcept { return index_; }
-
-private:
-    uint8_t index_;
-};
+using RegId = primitives::Index<32>;
 
 }  // namespace pebble::isa
-
-/* Hash support so RegId can be used as a key in a map/set without fancy workarounds */
-namespace std {
-template<>
-struct hash<pebble::isa::RegId> {
-    std::size_t operator()(const pebble::isa::RegId &r) const noexcept {
-        return std::hash<uint8_t>{}(r.index());
-    }
-};
-}  // namespace std

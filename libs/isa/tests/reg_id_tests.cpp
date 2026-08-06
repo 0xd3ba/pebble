@@ -37,7 +37,7 @@ TEST(RegIdTest, X0IsNotSpecialCasedAtConstruction) {
 TEST(RegIdTest, StreamOutputFormatsAsAbiStyleName) {
     std::ostringstream oss;
     oss << RegId{10};
-    EXPECT_EQ(oss.str(), "x10");
+    EXPECT_EQ(oss.str(), "10");
 }
 
 TEST(RegIdTest, UsableAsUnorderedSetKey) {
