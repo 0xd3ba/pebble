@@ -75,6 +75,10 @@ FunctionalExecutionResult execute(const Instruction &instr, addr_t pc, const Arc
                     r.trap.kind = TrapKind::Breakpoint;
                     break;
 
+                case Op::MRET:
+                    r.next_pc = csrf.read_mepc();
+                    break;
+
                 default: throw std::invalid_argument{"execute() on system family but op unsupported"};
             }
             break;

@@ -68,6 +68,7 @@ private:
             case Op::FENCE:  return "fence";
             case Op::ECALL:  return "ecall";
             case Op::EBREAK: return "ebreak";
+            case Op::MRET:   return "mret";
             case Op::CSRRW:  return "csrrw";
             case Op::CSRRS:  return "csrrs";
             case Op::CSRRC:  return "csrrc";

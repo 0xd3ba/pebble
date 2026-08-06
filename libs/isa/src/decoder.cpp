@@ -270,13 +270,14 @@ Instruction Decoder::decode_system(word_t w) noexcept {
     i.raw = w;
     i.funct3 = static_cast<uint8_t>(BitsW::get_bits(w, 12, 14));
 
-    // ecall and ebreak
+    // ecall, ebreak and mret
     if(i.funct3 == 0x0) {
         i.op_fam = OpFamily::System;
         i.imm = imm;
 
         if(i.imm == 0x0) i.op = Op::ECALL;
         else if(i.imm == 0x1) i.op = Op::EBREAK;
+        else if(i.imm == 0x302) i.op = Op::MRET;
         else return illegal_instruction(w);
 
         // ensure rs1 and rd are zeros

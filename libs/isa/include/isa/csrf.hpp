@@ -16,6 +16,7 @@ public:
     static constexpr uint16_t kCycleHi = 0xc80;   // cycle counter bits[32:63]
     static constexpr uint16_t kInsRetLo = 0xc02;  // instructions retired counter bits[0:31]
     static constexpr uint16_t kInsRetHi = 0xc82;  // instructions retired counter bits[32:63]
+    static constexpr uint16_t kMepc = 0x341;
 };
 
 /* CsrFile -- A stripped down version RISC-V control/status register state this simulator actually needs.
@@ -45,6 +46,11 @@ public:
             case CsrIndex::kInsRetLo:
             case CsrIndex::kInsRetHi:
                 return;
+
+            case CsrIndex::kMepc:
+                mepc_ = value;
+                [[fallthrough]];  // also update the register
+
             default: regs_[id] = value;
         }
     }

@@ -35,8 +35,9 @@ enum class Op {
     /* RV32I: upper immediate */
     LUI, AUIPC,
 
-    /* RV32I: misc-memory / system / csr (modeled as recognized, functionally no-op/trap-triggering) -- can't ignore these */
-    FENCE, ECALL, EBREAK, CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
+    /* RV32I: misc-memory / system / csr -- can't ignore these */
+    FENCE, ECALL, EBREAK, MRET,
+    CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI,
 
     /* M extension */
     MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU,
