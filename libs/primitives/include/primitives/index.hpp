@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 
 namespace pebble::primitives {
 
@@ -16,7 +17,7 @@ public:
 
     bool operator==(const Index &other) const noexcept = default;
     bool operator!=(const Index &other) const noexcept = default;
-    friend std::ostream& operator<<(std::ostream &os, const Index &id) { return os << id.index_; }
+    friend std::ostream& operator<<(std::ostream &os, const Index &id) { return os << std::to_string(id.index_); }
 
     uint32_t index() const noexcept { return index_; }
 
