@@ -110,7 +110,7 @@ public:
          * register read normally happens alongside decode; decode(...) designed specifically to only
          * decode an instruction (single responsibility). In either case, register read happens before execution */
         FunctionalExecutionResult result = execute(instr, pc_, regs_, csrf_);
-        if(result.trap.is_trap()) finish_with_trap(result.trap, trace);
+        if(result.trap.is_trap()) return finish_with_trap(result.trap, trace);
 
         // stage-4: memory-access
         if(instr.op_fam == OpFamily::Load || instr.op_fam == OpFamily::Store) {
