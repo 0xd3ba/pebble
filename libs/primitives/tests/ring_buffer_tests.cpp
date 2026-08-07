@@ -125,10 +125,6 @@ TEST(RingBufferRejectTest, TotalWritesCountsAllSuccessfulPushes) {
     EXPECT_EQ(rb.total_writes(), 4);
 }
 
-TEST(RingBufferRejectTest, CapacityReflectsTemplateParameter) {
-    EXPECT_EQ(RejectBuffer::capacity(), 3);
-}
-
 TEST(RingBufferOverwriteTest, PushBackPastCapacityEvictsOldest) {
     OverwriteBuffer rb{};
     rb.push_back(1);

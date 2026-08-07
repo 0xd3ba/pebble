@@ -19,13 +19,20 @@ enum class RingBufferPolicy { Reject, Overwrite, };
 template<typename T, std::size_t N, RingBufferPolicy Policy = RingBufferPolicy::Reject>
 class RingBuffer {
 public:
-    RingBuffer() = default;
+    static_assert(N > 0, "RingBuffer: capacity must be > 0");
+
+    RingBuffer(): max_entries_{N} {}
+    explicit RingBuffer(std::size_t max_entries): max_entries_{max_entries} {
+        if(max_entries == 0 || max_entries > N)
+            throw std::invalid_argument{"RingBuffer: max_entries must be > 0 and <= " + std::to_string(N)};
+    }
 
     [[nodiscard]] bool empty() const noexcept { return count_ == 0; }
-    [[nodiscard]] bool full() const noexcept { return count_ == N; }
+    [[nodiscard]] bool full() const noexcept { return count_ == max_entries_; }
     [[nodiscard]] std::size_t size() const noexcept { return count_; }
-    [[nodiscard]] static constexpr std::size_t capacity() { return N; }
-    [[nodiscard]] const T& front() const noexcept { return buffer_[head_]; };
+    [[nodiscard]] std::size_t capacity() { return max_entries_; }
+    [[nodiscard]] const T& front() const noexcept { return buffer_[head_]; };  // precondition: !empty()
+    [[nodiscard]] std::size_t front_index() const noexcept { return head_; }
     [[nodiscard]] std::uint64_t total_writes() const noexcept { return total_writes_; }
 
     /* Allocates a slot at the tail, returning its index.
@@ -35,7 +42,7 @@ public:
         if(full()) {
             if constexpr(Policy == RingBufferPolicy::Reject) return std::nullopt;
             // overwrite policy
-            head_ = (head_ + 1) % N;
+            head_ = (head_ + 1) % max_entries_;
             count_--;  // will be incremented below
         }
 
@@ -43,7 +50,7 @@ public:
         std::size_t tail = tail_;
         buffer_[tail] = std::move(item);
 
-        tail_ = (tail_ + 1) % N;
+        tail_ = (tail_ + 1) % max_entries_;
         count_++;
         total_writes_++;
 
@@ -52,8 +59,8 @@ public:
 
     /* Removes the oldest entry; precondition: !empty() */
     void pop_front() {
-        head_ = (head_ + 1) % N;
         if(count_ - 1 > count_) throw std::logic_error{"RingBuffer: pop_front() called on empty buffer"};
+        head_ = (head_ + 1) % max_entries_;
         count_--;
     }
 
@@ -63,24 +70,30 @@ public:
         std::size_t i = head_;
         for(std::size_t n=0; n<count_; n++) {
             fn(buffer_[i]);
-            i = (i + 1) % N;
+            i = (i + 1) % max_entries_;
         }
     }
 
     void reset() {
-        buffer_.fill(0);
+        buffer_.fill(T{});
         head_ = 0;
         tail_ = 0;
         count_ = 0;
     }
 
     [[nodiscard]] const T& operator[](std::size_t i) const {
-        if(i > N) throw std::out_of_range{"RingBuffer: index out of range " + std::to_string(i)};
+        if(i >= max_entries_) throw std::out_of_range{"RingBuffer: index out of range " + std::to_string(i)};
+        return buffer_[i];
+    };
+
+    [[nodiscard]] T& operator[](std::size_t i) {
+        if(i >= max_entries_) throw std::out_of_range{"RingBuffer: index out of range " + std::to_string(i)};
         return buffer_[i];
     };
 
 private:
     std::array<T, N> buffer_{};
+    const std::size_t max_entries_;
     std::size_t head_{0};
     std::size_t tail_{0};
     std::uint64_t count_{0};         // total valid entries in the buffer; capped to N
