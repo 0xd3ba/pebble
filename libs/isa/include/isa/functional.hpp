@@ -14,7 +14,7 @@
 #include "isa/ops.hpp"
 #include "isa/reg_id.hpp"
 #include "isa/trap.hpp"
-#include "utils/tracer.hpp"
+#include "primitives/ring_buffer.hpp"
 
 namespace pebble::isa::functional {
 
@@ -161,7 +161,7 @@ private:
     ArchRegisterFile &regs_;
     FlatMemory &mem_;
     CsrFile &csrf_;
-    utils::Tracer<FunctionalExecutionTrace, 64> tracer_{};
+    primitives::RingBuffer<FunctionalExecutionTrace, 32, primitives::RingBufferPolicy::Overwrite> tracer_{};
 
     Trap finish_with_trap(Trap &t, FunctionalExecutionTrace trace) {
         if(!t.faulting_addr.has_value()) t.faulting_addr = pc_;
