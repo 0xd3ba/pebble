@@ -9,6 +9,7 @@ target_include_directories(primitives PUBLIC include)
 add_executable(primitives_tests
     tests/register_tests.cpp
     tests/fifo_tests.cpp
+    tests/ring_buffer_tests.cpp
     tests/cam_tests.cpp
     tests/bitset_pool_tests.cpp
     tests/latch_tests.cpp
