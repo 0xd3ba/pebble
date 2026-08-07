@@ -20,7 +20,7 @@ public:
     friend std::ostream& operator<<(std::ostream &os, const Index &id) { return os << std::to_string(id.index_); }
 
     uint32_t index() const noexcept { return index_; }
-    std::size_t size() const noexcept { return N; }
+    static constexpr std::size_t size() { return N; }
 
 private:
     uint32_t index_;
