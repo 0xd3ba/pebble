@@ -1,10 +1,12 @@
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <gtest/gtest.h>
 #include "primitives/register.hpp"
 #include "uarch/prf.hpp"
 
 using namespace pebble::uarch;
+namespace primitives = pebble::primitives;
 
 TEST(PhysicalRegisterFileTest, ConstructsWithValidSize) {
     EXPECT_NO_THROW(PhysicalRegisterFile{64});
@@ -91,4 +93,104 @@ TEST(PhysicalRegisterFileTest, IndexBelowCeilingButAboveConfiguredSizeIsRejected
     // Legal for Index<kMaxPhysRegs>, but this PRF was only configured for 64.
     PhysicalRegisterFile prf{64};
     EXPECT_THROW(prf.read(PhysRegId{200}), std::invalid_argument);
+}
+
+TEST(PhysicalRegisterFreeListTest, ConstructsWithValidSize) {
+    EXPECT_NO_THROW(PhysicalRegisterFreeList{64});
+}
+
+TEST(PhysicalRegisterFreeListTest, AllocateReturnsDistinctIds) {
+    PhysicalRegisterFreeList free_list{64};
+
+    auto a = free_list.allocate();
+    auto b = free_list.allocate();
+
+    ASSERT_TRUE(a.has_value());
+    ASSERT_TRUE(b.has_value());
+    EXPECT_NE(*a, *b);
+}
+
+TEST(PhysicalRegisterFreeListTest, AllocatedIdIsMarkedAllocated) {
+    PhysicalRegisterFreeList free_list{64};
+
+    auto id = free_list.allocate();
+
+    ASSERT_TRUE(id.has_value());
+    EXPECT_TRUE(free_list.is_allocated(*id));
+}
+
+TEST(PhysicalRegisterFreeListTest, ExhaustingPoolReturnsNullopt) {
+    PhysicalRegisterFreeList free_list{2};
+
+    EXPECT_TRUE(free_list.allocate().has_value());
+    EXPECT_TRUE(free_list.allocate().has_value());
+    EXPECT_EQ(free_list.allocate(), std::nullopt);
+}
+
+TEST(PhysicalRegisterFreeListTest, FreeingAllowsReallocation) {
+    PhysicalRegisterFreeList free_list{1};
+    auto id = free_list.allocate();
+    ASSERT_TRUE(id.has_value());
+    ASSERT_EQ(free_list.allocate(), std::nullopt);
+
+    free_list.free(*id);
+
+    EXPECT_EQ(free_list.allocate(), id);
+}
+
+TEST(PhysicalRegisterFreeListTest, FreedIdIsNoLongerAllocated) {
+    PhysicalRegisterFreeList free_list{64};
+    auto id = free_list.allocate();
+    ASSERT_TRUE(id.has_value());
+
+    free_list.free(*id);
+
+    EXPECT_FALSE(free_list.is_allocated(*id));
+}
+
+TEST(PhysicalRegisterFreeListTest, DoubleFreeThrows) {
+    PhysicalRegisterFreeList free_list{64};
+    auto id = free_list.allocate();
+    ASSERT_TRUE(id.has_value());
+    free_list.free(*id);
+
+    EXPECT_THROW(free_list.free(*id), primitives::BitsetPoolError);
+}
+
+TEST(PhysicalRegisterFreeListTest, CheckpointCapturesAllocationState) {
+    PhysicalRegisterFreeList free_list{64};
+    auto id = free_list.allocate();
+    ASSERT_TRUE(id.has_value());
+
+    auto snapshot = free_list.checkpoint();
+    free_list.free(*id);
+
+    free_list.restore(snapshot);
+
+    EXPECT_TRUE(free_list.is_allocated(*id));
+}
+
+TEST(PhysicalRegisterFreeListTest, RestoreAfterFurtherAllocationsRevertsThem) {
+    PhysicalRegisterFreeList free_list{2};
+    auto snapshot = free_list.checkpoint();  // nothing allocated yet
+
+    auto a = free_list.allocate();
+    auto b = free_list.allocate();
+    ASSERT_TRUE(a.has_value());
+    ASSERT_TRUE(b.has_value());
+
+    free_list.restore(snapshot);
+
+    EXPECT_FALSE(free_list.is_allocated(*a));
+    EXPECT_FALSE(free_list.is_allocated(*b));
+}
+
+TEST(PhysicalRegisterFreeListTest, CheckpointIsIndependentOfSubsequentMutation) {
+    PhysicalRegisterFreeList free_list{64};
+    auto snapshot = free_list.checkpoint();
+
+    auto id = free_list.allocate();
+    ASSERT_TRUE(id.has_value());
+
+    EXPECT_FALSE(snapshot.pool.is_allocated(id->index()));
 }

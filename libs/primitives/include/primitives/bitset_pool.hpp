@@ -13,7 +13,7 @@ public:
     using std::out_of_range::out_of_range;
 };
 
-/* BitsetPool - fixed-size pool of indices [0, capacity), each either free or allocated */
+/* BitsetPool -- Fixed-size pool of indices [0, capacity), each either free or allocated */
 class BitsetPool {
 public:
     BitsetPool() = delete;
@@ -65,6 +65,9 @@ public:
     std::size_t free_count() const noexcept { return capacity_ - allocated_count_; }
     bool full() const noexcept { return allocated_count_ == capacity_; }
     bool empty() const noexcept { return allocated_count_ == 0; }
+
+    bool operator==(const BitsetPool &other) const = default;
+    bool operator!=(const BitsetPool &other) const = default;
 
 private:
     static constexpr std::size_t kWordBits = 64;

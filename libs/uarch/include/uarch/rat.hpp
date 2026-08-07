@@ -12,7 +12,7 @@ using areg_preg_map_t = std::unordered_map<isa::RegId, PhysRegId>;
 
 /* RatSnapshot -- snapshot of the RegisterAliasTable */
 struct RatSnapshot {
-    const areg_preg_map_t snapshot{};
+    areg_preg_map_t snapshot{};
     bool operator==(const RatSnapshot &other) const = default;
     bool operator!=(const RatSnapshot &other) const = default;
 };

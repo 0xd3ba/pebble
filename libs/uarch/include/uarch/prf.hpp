@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include "primitives/bitset_pool.hpp"
 #include "primitives/index.hpp"
 #include "primitives/register.hpp"
 
@@ -13,7 +14,39 @@ constexpr std::size_t kMaxPhysRegisters = 1024;
 using PhysRegId = primitives::Index<kMaxPhysRegisters>;
 using prf_t = uint32_t;
 
-/* PhysicalRegisterFile -- value storage for renamed architectural registers */
+/* PhysRegFreeListSnapshot -- Snapshot of the free-list of physical registers.
+ * Also need to restore the free-list alongside RAT */
+struct PhysRegFreeListSnapshot {
+    primitives::BitsetPool pool;
+    bool operator==(const PhysRegFreeListSnapshot &other) const = default;
+    bool operator!=(const PhysRegFreeListSnapshot &other) const = default;
+};
+
+/* PhysicalRegisterFreeList -- Maintains the free-list of the physical register file
+ * IMPORTANT: Ensure that both physical register file and free list are instantiated with the same max_regs argument */
+class PhysicalRegisterFreeList {
+public:
+    PhysicalRegisterFreeList() = delete;
+    explicit PhysicalRegisterFreeList(std::size_t max_regs): pool_{max_regs} {}
+
+    /* Returns the first physical register that is free; std::nullopt if none */
+    [[nodiscard]] std::optional<PhysRegId> allocate() {
+        auto id = pool_.allocate();
+        if(!id.has_value()) return std::nullopt;
+        return PhysRegId{*id};
+    }
+
+    [[nodiscard]] PhysRegFreeListSnapshot checkpoint() const { return PhysRegFreeListSnapshot{.pool=pool_}; }
+    void restore(PhysRegFreeListSnapshot snapshot) { pool_ = std::move(snapshot.pool); }
+
+    void free(PhysRegId id) { pool_.free(id.index());  /* might throw on double-free or out-of-bound index */ }
+    bool is_allocated(PhysRegId id) const { return pool_.is_allocated(id.index()); /* might throw on out-of-bound index */ }
+
+private:
+    primitives::BitsetPool pool_;
+};
+
+/* PhysicalRegisterFile -- Value storage for renamed architectural registers */
 class PhysicalRegisterFile {
 public:
     PhysicalRegisterFile() = delete;
