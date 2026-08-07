@@ -27,7 +27,10 @@ struct PhysRegFreeListSnapshot {
 class PhysicalRegisterFreeList {
 public:
     PhysicalRegisterFreeList() = delete;
-    explicit PhysicalRegisterFreeList(std::size_t max_regs): pool_{max_regs} {}
+    explicit PhysicalRegisterFreeList(std::size_t max_regs): pool_{max_regs} {
+        if(max_regs == 0 || max_regs > kMaxPhysRegisters)
+            throw std::invalid_argument{"PhysicalRegisterFreeList: max_regs must be > 0 and <= " + std::to_string(kMaxPhysRegisters)};
+    }
 
     /* Returns the first physical register that is free; std::nullopt if none */
     [[nodiscard]] std::optional<PhysRegId> allocate() {
