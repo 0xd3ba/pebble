@@ -2,12 +2,11 @@
 
 #include <cstdint>
 #include <optional>
+#include "isa/addr.hpp"
 #include "isa/op.hpp"
 #include "isa/reg_id.hpp"
 
 namespace pebble::isa {
-
-using word_t = uint32_t;
 
 /* Instruction -- a decoded RV32I+M instruction word. Flat struct across all formats for easy representation
  * (reducing few bytes per instruction is not worth the complexity involved in multi-format instructions) */
