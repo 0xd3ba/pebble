@@ -125,6 +125,106 @@ TEST(RingBufferRejectTest, TotalWritesCountsAllSuccessfulPushes) {
     EXPECT_EQ(rb.total_writes(), 4);
 }
 
+TEST(RingBufferRejectTest, PopBackRemovesNewestEntry) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    rb.push_back(2);
+    rb.push_back(3);
+
+    rb.pop_back();
+
+    EXPECT_EQ(rb.size(), 2);
+    EXPECT_FALSE(rb.full());
+    EXPECT_TRUE(rb.push_back(4).has_value());  // freed slot reusable
+}
+
+TEST(RingBufferRejectTest, PopBackOnEmptyThrows) {
+    RejectBuffer rb{};
+    EXPECT_THROW(rb.pop_back(), std::logic_error);
+}
+
+TEST(RingBufferRejectTest, PopBackWrapsCorrectlyAtZero) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    rb.push_back(2);
+    rb.push_back(3);
+    rb.pop_front();  // head advances, tail still at 0 (wrapped)
+    rb.push_back(4);  // tail wraps around to slot 0
+
+    rb.pop_back(); // should remove 4, land back_index() on slot 2 (value 3)
+
+    EXPECT_EQ(rb.back_index(), 2);
+    EXPECT_EQ(rb.size(), 2);
+}
+
+TEST(RingBufferRejectTest, BackIndexMatchesLastPushedSlot) {
+    RejectBuffer rb{};
+    auto idx = rb.push_back(42);
+
+    ASSERT_TRUE(idx.has_value());
+    EXPECT_EQ(rb.back_index(), *idx);
+}
+
+TEST(RingBufferRejectTest, TruncateAfterKeepsUpToGivenIndex) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    auto b = rb.push_back(2);
+    rb.push_back(3);
+
+    ASSERT_TRUE(b.has_value());
+
+    rb.truncate_after(*b);  // should remove slot 2 (value 3)
+
+    EXPECT_EQ(rb.size(), 2);
+    EXPECT_EQ(rb.back_index(), *b);
+}
+
+TEST(RingBufferRejectTest, TruncateAfterWithNulloptEmptiesBuffer) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    rb.push_back(2);
+
+    rb.truncate_after(std::nullopt);
+
+    EXPECT_TRUE(rb.empty());
+}
+
+TEST(RingBufferRejectTest, TruncateAfterInvalidIndexThrows) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    rb.push_back(2);
+
+    EXPECT_THROW(rb.truncate_after(99), std::invalid_argument);
+}
+
+TEST(RingBufferRejectTest, TruncateAfterFreesSlotsForReallocation) {
+    RejectBuffer rb{};
+    auto a = rb.push_back(1);
+    rb.push_back(2);
+    rb.push_back(3);
+
+    ASSERT_TRUE(a.has_value());
+
+    rb.truncate_after(*a);
+
+    EXPECT_EQ(rb.size(), 1);
+    EXPECT_TRUE(rb.push_back(4).has_value());
+    EXPECT_TRUE(rb.push_back(5).has_value());
+}
+
+TEST(RingBufferRejectTest, TruncateAfterOnAlreadyMatchingBackIsNoOp) {
+    RejectBuffer rb{};
+    rb.push_back(1);
+    auto b = rb.push_back(2);
+
+    ASSERT_TRUE(b.has_value());
+
+    rb.truncate_after(*b);
+
+    EXPECT_EQ(rb.size(), 2);
+    EXPECT_EQ(rb.back_index(), *b);
+}
+
 TEST(RingBufferOverwriteTest, PushBackPastCapacityEvictsOldest) {
     OverwriteBuffer rb{};
     rb.push_back(1);

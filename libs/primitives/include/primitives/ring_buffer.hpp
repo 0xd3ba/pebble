@@ -33,6 +33,7 @@ public:
     [[nodiscard]] std::size_t capacity() { return max_entries_; }
     [[nodiscard]] const T& front() const noexcept { return buffer_[head_]; };  // precondition: !empty()
     [[nodiscard]] std::size_t front_index() const noexcept { return head_; }
+    [[nodiscard]] std::size_t back_index() const noexcept { return (tail_ + max_entries_ - 1) % max_entries_; }  // index to last valid element
     [[nodiscard]] std::uint64_t total_writes() const noexcept { return total_writes_; }
 
     /* Allocates a slot at the tail, returning its index.
@@ -62,6 +63,17 @@ public:
         if(count_ - 1 > count_) throw std::logic_error{"RingBuffer: pop_front() called on empty buffer"};
         head_ = (head_ + 1) % max_entries_;
         count_--;
+    }
+
+    void pop_back() {
+        if(count_ - 1 > count_) throw std::logic_error{"RingBuffer: pop_back() called on empty buffer"};
+        tail_ = back_index();
+        count_--;
+    }
+
+    void truncate_after(std::optional<std::size_t> index) {
+        while(!empty() && (!index.has_value() || back_index() != *index)) pop_back();
+        if(empty() && index.has_value()) throw std::invalid_argument{"RingBuffer: truncate_after(...) called on invalid index"};
     }
 
     /* Goes through entries from oldest -> newest */
