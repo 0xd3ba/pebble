@@ -79,11 +79,24 @@ public:
     /* Goes through entries from oldest -> newest */
     template<typename Fn>
     void for_each(Fn &&fn) const {
-        std::size_t i = head_;
-        for(std::size_t n=0; n<count_; n++) {
-            fn(buffer_[i]);
-            i = (i + 1) % max_entries_;
-        }
+        walk([&](std::size_t, const T &entry) {
+            fn(entry);
+            return false;  // don't stop early
+        });
+    }
+
+    /* Returns first or last index to satisfy the condition when iterating from oldest -> newest; std::nullopt otherwise */
+    template<typename Condition>
+    std::optional<std::size_t> index_when(Condition &&fn, bool stop_on_found = true) {
+        std::optional<std::size_t> found{};
+
+        walk([&](std::size_t i, const T &entry) {
+            if(!fn(entry)) return false;
+            found = i;
+            return stop_on_found;  // stop as soon as condition is satisfied if stop_on_found=true
+        });
+
+        return found;
     }
 
     void reset() {
@@ -110,6 +123,17 @@ private:
     std::size_t tail_{0};
     std::uint64_t count_{0};         // total valid entries in the buffer; capped to N
     std::uint64_t total_writes_{0};  // total writes to the buffer (uncapped)
+
+    /* Visits live entries oldest -> newest, calling fn(index, entry) for each. Stops early if
+     * fn returns true (treated as found/stop) */
+    template <typename Fn>
+    void walk(Fn&& fn) const {
+        std::size_t i = head_;
+        for (std::size_t n=0; n<count_; n++) {
+            if (fn(i, buffer_[i])) return;
+            i = (i + 1) % max_entries_;
+        }
+    }
 };
 
 }  // namespace pebble::primitives
