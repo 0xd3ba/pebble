@@ -10,7 +10,7 @@ namespace pebble::primitives {
 template<std::size_t N>
 class Index {
 public:
-    Index() = delete;
+    Index(): index_{0} {}
     explicit Index(uint32_t index): index_{index} {
         if(index >= N) throw std::out_of_range{"Id index out of range: " + std::to_string(index)};
     }
