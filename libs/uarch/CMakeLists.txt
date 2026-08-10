@@ -7,7 +7,7 @@ add_executable(uarch_tests
     tests/prf_tests.cpp
     tests/rat_tests.cpp
     tests/rob_tests.cpp
-    tests/rob_tests.cpp
+    tests/lsq_tests.cpp
 )
 target_link_libraries(uarch_tests PRIVATE uarch primitives isa utils GTest::gtest_main)
 
